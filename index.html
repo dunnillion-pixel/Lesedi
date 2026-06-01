@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartTodo - MVP 6</title>
+  <title>SmartTodo - Robot Status</title>
 
   <style>
     body {
@@ -48,7 +48,7 @@
     }
 
     .ai-box {
-      margin: 15px 0;
+      margin: 10px 0;
       padding: 12px;
       border: 1px solid #ddd;
       border-radius: 8px;
@@ -80,14 +80,14 @@
       color: #777;
     }
 
+    .status {
+      font-size: 18px;
+      margin-right: 8px;
+    }
+
     .done .main-text {
       text-decoration: line-through;
       color: #888;
-    }
-
-    .priority {
-      font-size: 12px;
-      font-weight: bold;
     }
 
     .empty {
@@ -99,12 +99,12 @@
 
 <body>
 
-<h1>SmartTodo</h1>
+<h1>SmartTodo 🤖</h1>
 
 <!-- INPUT -->
 <div class="input-row">
   <input id="taskInput" placeholder="Enter task..." />
-  
+
   <select id="priorityInput">
     <option value="1">Low</option>
     <option value="2" selected>Medium</option>
@@ -114,7 +114,7 @@
   <button onclick="addTask()">Add</button>
 </div>
 
-<!-- AI SUGGESTION -->
+<!-- AI BUTTON -->
 <div class="ai-box">
   <button onclick="suggestTask()">👉 What should I do next?</button>
   <p id="suggestion">No suggestion yet.</p>
@@ -127,7 +127,7 @@
   <button onclick="setFilter('done')">Done</button>
 </div>
 
-<!-- TASK LIST -->
+<!-- TASKS -->
 <div id="taskContainer"></div>
 
 <script>
@@ -184,7 +184,19 @@ function getFilteredTasks() {
   return tasks;
 }
 
-/* ---------------- AI LOGIC (RULE-BASED) ---------------- */
+/* ---------------- ROBOT STATUS ENGINE ---------------- */
+
+function getStatus(task) {
+  if (task.done) return "🟢";
+
+  const ageHours = (Date.now() - task.createdAt) / (1000 * 60 * 60);
+
+  if (ageHours > 24) return "🔴";
+
+  return "🟠";
+}
+
+/* ---------------- AI (rule-based) ---------------- */
 
 function suggestTask() {
   const active = tasks.filter(t => !t.done);
@@ -195,12 +207,11 @@ function suggestTask() {
     return;
   }
 
-  // Sort by priority first, then oldest task
   const sorted = active.sort((a, b) => {
     if (b.priority !== a.priority) {
-      return b.priority - a.priority; // high priority first
+      return b.priority - a.priority;
     }
-    return a.createdAt - b.createdAt; // older first
+    return a.createdAt - b.createdAt;
   });
 
   const best = sorted[0];
@@ -221,12 +232,17 @@ function render() {
   }
 
   container.innerHTML = "<ul>" + list.map((task, index) => {
+
     const date = new Date(task.createdAt).toLocaleString();
+    const status = getStatus(task);
 
     return `
-      <li class="${task.done ? "done" : ""}">
+      <li>
         <div class="text">
-          <span class="main-text">${task.text}</span>
+          <span>
+            <span class="status">${status}</span>
+            <span class="main-text">${task.text}</span>
+          </span>
           <span class="meta">
             Priority: ${task.priority} • ${date}
           </span>
