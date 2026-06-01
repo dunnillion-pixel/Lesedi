@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartTodo - MVP 5</title>
+  <title>SmartTodo - MVP 6</title>
 
   <style>
     body {
@@ -20,13 +20,16 @@
     .input-row {
       display: flex;
       gap: 10px;
-      margin-bottom: 15px;
+      margin-bottom: 10px;
+    }
+
+    input, select {
+      padding: 10px;
+      font-size: 14px;
     }
 
     input {
       flex: 1;
-      padding: 10px;
-      font-size: 16px;
     }
 
     button {
@@ -36,13 +39,20 @@
 
     .filters {
       display: flex;
-      justify-content: space-between;
-      margin-bottom: 15px;
+      gap: 5px;
+      margin: 10px 0;
     }
 
     .filters button {
       flex: 1;
-      margin: 0 3px;
+    }
+
+    .ai-box {
+      margin: 15px 0;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #f9f9f9;
     }
 
     ul {
@@ -75,6 +85,11 @@
       color: #888;
     }
 
+    .priority {
+      font-size: 12px;
+      font-weight: bold;
+    }
+
     .empty {
       text-align: center;
       color: #777;
@@ -84,110 +99,152 @@
 
 <body>
 
-  <h1>SmartTodo</h1>
+<h1>SmartTodo</h1>
 
-  <div class="input-row">
-    <input id="taskInput" placeholder="Enter a task..." />
-    <button onclick="addTask()">Add</button>
-  </div>
+<!-- INPUT -->
+<div class="input-row">
+  <input id="taskInput" placeholder="Enter task..." />
+  
+  <select id="priorityInput">
+    <option value="1">Low</option>
+    <option value="2" selected>Medium</option>
+    <option value="3">High</option>
+  </select>
 
-  <div class="filters">
-    <button onclick="setFilter('all')">All</button>
-    <button onclick="setFilter('active')">Active</button>
-    <button onclick="setFilter('done')">Done</button>
-  </div>
+  <button onclick="addTask()">Add</button>
+</div>
 
-  <div id="taskContainer"></div>
+<!-- AI SUGGESTION -->
+<div class="ai-box">
+  <button onclick="suggestTask()">👉 What should I do next?</button>
+  <p id="suggestion">No suggestion yet.</p>
+</div>
 
-  <script>
-    let tasks = loadTasks();
-    let currentFilter = "all";
+<!-- FILTERS -->
+<div class="filters">
+  <button onclick="setFilter('all')">All</button>
+  <button onclick="setFilter('active')">Active</button>
+  <button onclick="setFilter('done')">Done</button>
+</div>
 
-    function saveTasks() {
-      localStorage.setItem("tasks", JSON.stringify(tasks));
+<!-- TASK LIST -->
+<div id="taskContainer"></div>
+
+<script>
+let tasks = loadTasks();
+let currentFilter = "all";
+
+function saveTasks() {
+  localStorage.setItem("tasks", JSON.stringify(tasks));
+}
+
+function loadTasks() {
+  return JSON.parse(localStorage.getItem("tasks")) || [];
+}
+
+function addTask() {
+  const input = document.getElementById("taskInput");
+  const priority = document.getElementById("priorityInput").value;
+
+  const text = input.value.trim();
+  if (!text) return;
+
+  tasks.push({
+    text,
+    createdAt: Date.now(),
+    done: false,
+    priority: Number(priority)
+  });
+
+  input.value = "";
+  saveTasks();
+  render();
+}
+
+function toggleTask(index) {
+  tasks[index].done = !tasks[index].done;
+  saveTasks();
+  render();
+}
+
+function deleteTask(index) {
+  tasks.splice(index, 1);
+  saveTasks();
+  render();
+}
+
+function setFilter(filter) {
+  currentFilter = filter;
+  render();
+}
+
+function getFilteredTasks() {
+  if (currentFilter === "active") return tasks.filter(t => !t.done);
+  if (currentFilter === "done") return tasks.filter(t => t.done);
+  return tasks;
+}
+
+/* ---------------- AI LOGIC (RULE-BASED) ---------------- */
+
+function suggestTask() {
+  const active = tasks.filter(t => !t.done);
+
+  if (active.length === 0) {
+    document.getElementById("suggestion").innerText =
+      "No tasks available 🎉";
+    return;
+  }
+
+  // Sort by priority first, then oldest task
+  const sorted = active.sort((a, b) => {
+    if (b.priority !== a.priority) {
+      return b.priority - a.priority; // high priority first
     }
+    return a.createdAt - b.createdAt; // older first
+  });
 
-    function loadTasks() {
-      const data = localStorage.getItem("tasks");
-      return data ? JSON.parse(data) : [];
-    }
+  const best = sorted[0];
 
-    function addTask() {
-      const input = document.getElementById("taskInput");
-      const text = input.value.trim();
+  document.getElementById("suggestion").innerText =
+    `Do: "${best.text}" (Priority ${best.priority})`;
+}
 
-      if (!text) return;
+/* ---------------- RENDER ---------------- */
 
-      tasks.push({
-        text,
-        createdAt: Date.now(),
-        done: false
-      });
+function render() {
+  const container = document.getElementById("taskContainer");
+  const list = getFilteredTasks();
 
-      input.value = "";
-      saveTasks();
-      render();
-    }
+  if (list.length === 0) {
+    container.innerHTML = '<p class="empty">No tasks found.</p>';
+    return;
+  }
 
-    function toggleTask(index) {
-      tasks[index].done = !tasks[index].done;
-      saveTasks();
-      render();
-    }
+  container.innerHTML = "<ul>" + list.map((task, index) => {
+    const date = new Date(task.createdAt).toLocaleString();
 
-    function deleteTask(index) {
-      tasks.splice(index, 1);
-      saveTasks();
-      render();
-    }
+    return `
+      <li class="${task.done ? "done" : ""}">
+        <div class="text">
+          <span class="main-text">${task.text}</span>
+          <span class="meta">
+            Priority: ${task.priority} • ${date}
+          </span>
+        </div>
 
-    function setFilter(filter) {
-      currentFilter = filter;
-      render();
-    }
+        <div>
+          <button onclick="toggleTask(${index})">
+            ${task.done ? "Undo" : "Done"}
+          </button>
+          <button onclick="deleteTask(${index})">Delete</button>
+        </div>
+      </li>
+    `;
+  }).join("") + "</ul>";
+}
 
-    function getFilteredTasks() {
-      if (currentFilter === "active") {
-        return tasks.filter(t => !t.done);
-      }
-      if (currentFilter === "done") {
-        return tasks.filter(t => t.done);
-      }
-      return tasks;
-    }
-
-    function render() {
-      const container = document.getElementById("taskContainer");
-      const list = getFilteredTasks();
-
-      if (list.length === 0) {
-        container.innerHTML = `<p class="empty">No tasks found.</p>`;
-        return;
-      }
-
-      container.innerHTML = "<ul>" + list.map((task, i) => {
-        const date = new Date(task.createdAt).toLocaleString();
-
-        return `
-          <li class="${task.done ? "done" : ""}">
-            <div class="text">
-              <span class="main-text">${task.text}</span>
-              <span class="meta">${date}</span>
-            </div>
-
-            <div>
-              <button onclick="toggleTask(${i})">
-                ${task.done ? "Undo" : "Done"}
-              </button>
-              <button onclick="deleteTask(${i})">Delete</button>
-            </div>
-          </li>
-        `;
-      }).join("") + "</ul>";
-    }
-
-    render();
-  </script>
+render();
+</script>
 
 </body>
 </html>
