@@ -3,22 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartTodo - MVP 7 AI</title>
+  <title>SmartTodo - MVP 8A</title>
 
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
-      max-width: 520px;
+      max-width: 540px;
       margin: auto;
     }
 
-    h1 { text-align: center; }
+    h1 {
+      text-align: center;
+    }
 
     .input-row {
       display: flex;
+      flex-direction: column;
       gap: 10px;
-      margin-bottom: 10px;
+      margin-bottom: 15px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
     }
 
     input, select {
@@ -26,7 +34,9 @@
       font-size: 14px;
     }
 
-    input { flex: 1; }
+    input {
+      flex: 1;
+    }
 
     button {
       padding: 10px;
@@ -47,7 +57,9 @@
       margin: 10px 0;
     }
 
-    .filters button { flex: 1; }
+    .filters button {
+      flex: 1;
+    }
 
     ul {
       list-style: none;
@@ -89,34 +101,38 @@
       color: #777;
     }
 
-    .ai-result {
-      white-space: pre-line;
-      font-family: monospace;
+    .due {
+      font-weight: bold;
     }
   </style>
 </head>
 
 <body>
 
-<h1>SmartTodo AI 🤖</h1>
+<h1>SmartTodo 📅</h1>
 
 <!-- INPUT -->
 <div class="input-row">
-  <input id="taskInput" placeholder="Enter task..." />
 
-  <select id="priorityInput">
-    <option value="1">Low</option>
-    <option value="2" selected>Medium</option>
-    <option value="3">High</option>
-  </select>
+  <div class="row">
+    <input id="taskInput" placeholder="Enter task..." />
 
-  <button onclick="addTask()">Add</button>
+    <select id="priorityInput">
+      <option value="1">Low</option>
+      <option value="2" selected>Medium</option>
+      <option value="3">High</option>
+    </select>
+  </div>
+
+  <input id="dueInput" type="datetime-local" />
+
+  <button onclick="addTask()">Add Task</button>
 </div>
 
 <!-- AI PANEL -->
 <div class="panel">
-  <button onclick="runAI()">🧠 Ask AI: What should I do?</button>
-  <div id="aiOutput" class="ai-result">AI idle...</div>
+  <button onclick="runAI()">🧠 What should I do next?</button>
+  <div id="aiOutput">AI idle...</div>
 </div>
 
 <!-- FILTERS -->
@@ -145,20 +161,23 @@ function loadTasks() {
 /* ---------------- TASK OPS ---------------- */
 
 function addTask() {
-  const input = document.getElementById("taskInput");
+  const text = document.getElementById("taskInput").value.trim();
   const priority = Number(document.getElementById("priorityInput").value);
+  const dueRaw = document.getElementById("dueInput").value;
 
-  const text = input.value.trim();
   if (!text) return;
 
   tasks.push({
     text,
     createdAt: Date.now(),
+    dueAt: dueRaw ? new Date(dueRaw).getTime() : null,
     done: false,
     priority
   });
 
-  input.value = "";
+  document.getElementById("taskInput").value = "";
+  document.getElementById("dueInput").value = "";
+
   saveTasks();
   render();
 }
@@ -193,31 +212,45 @@ function filteredTasks() {
 function getStatus(task) {
   if (task.done) return "🟢";
 
-  const ageHours = (Date.now() - task.createdAt) / (1000 * 60 * 60);
+  const now = Date.now();
+  const ageHours = (now - task.createdAt) / (1000 * 60 * 60);
+
+  // overdue check
+  if (task.dueAt && now > task.dueAt) return "🔴";
 
   if (ageHours > 24) return "🔴";
 
   return "🟠";
 }
 
-/* ---------------- AI ENGINE ---------------- */
+/* ---------------- AI ENGINE (UPDATED) ---------------- */
 
 function runAI() {
   const active = tasks.filter(t => !t.done);
 
   if (active.length === 0) {
-    setAI("No tasks available 🎉");
+    setAI("No tasks 🎉");
     return;
   }
 
   const scored = active.map(t => {
-    const ageHours = (Date.now() - t.createdAt) / (1000 * 60 * 60);
+    const now = Date.now();
+    const ageHours = (now - t.createdAt) / (1000 * 60 * 60);
 
-    // scoring system (AI simulation)
     let score = t.priority * 10;
 
-    if (ageHours > 24) score += 20;
-    else score += ageHours;
+    // age pressure
+    if (ageHours > 72) score += 20;
+    else if (ageHours > 24) score += 10;
+
+    // due pressure
+    if (t.dueAt) {
+      const diff = t.dueAt - now;
+
+      if (diff < 0) score += 30;           // overdue
+      else if (diff < 86400000) score += 20; // < 24h
+      else if (diff < 259200000) score += 10; // < 3 days
+    }
 
     return { ...t, score };
   });
@@ -227,15 +260,31 @@ function runAI() {
   const best = scored[0];
 
   setAI(
-`Recommended Task: ${best.text}
+`Recommended Task:
+${best.text}
+
 Priority: ${best.priority}
-Reason: Combination of priority + age + incomplete status
-Score: ${best.score.toFixed(1)}`
+Score: ${best.score.toFixed(1)}
+${best.dueAt ? "Due: " + new Date(best.dueAt).toLocaleString() : "No due date"}`
   );
 }
 
 function setAI(text) {
   document.getElementById("aiOutput").innerText = text;
+}
+
+/* ---------------- ROBOT STATUS ---------------- */
+
+function getStatus(task) {
+  if (task.done) return "🟢";
+
+  const now = Date.now();
+  const ageHours = (now - task.createdAt) / (1000 * 60 * 60);
+
+  if (task.dueAt && now > task.dueAt) return "🔴";
+  if (ageHours > 24) return "🔴";
+
+  return "🟠";
 }
 
 /* ---------------- RENDER ---------------- */
@@ -250,8 +299,12 @@ function render() {
   }
 
   container.innerHTML = "<ul>" + list.map((t, i) => {
-    const date = new Date(t.createdAt).toLocaleString();
+
     const status = getStatus(t);
+
+    const dueText = t.dueAt
+      ? new Date(t.dueAt).toLocaleString()
+      : "No due date";
 
     return `
       <li>
@@ -260,8 +313,9 @@ function render() {
             <span class="status">${status}</span>
             <span class="main-text">${t.text}</span>
           </span>
+
           <span class="meta">
-            Priority ${t.priority} • ${date}
+            Priority ${t.priority} • Due: ${dueText}
           </span>
         </div>
 
