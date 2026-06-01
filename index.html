@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartTodo - MVP 4</title>
+  <title>SmartTodo - MVP 5</title>
 
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
-      max-width: 500px;
+      max-width: 520px;
       margin: auto;
     }
 
@@ -20,7 +20,7 @@
     .input-row {
       display: flex;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
 
     input {
@@ -30,9 +30,19 @@
     }
 
     button {
-      padding: 10px 15px;
-      font-size: 16px;
+      padding: 10px;
       cursor: pointer;
+    }
+
+    .filters {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .filters button {
+      flex: 1;
+      margin: 0 3px;
     }
 
     ul {
@@ -50,20 +60,24 @@
       margin-bottom: 10px;
     }
 
-    .meta {
-      font-size: 12px;
-      color: #666;
-      display: block;
-    }
-
     .text {
       display: flex;
       flex-direction: column;
     }
 
+    .meta {
+      font-size: 12px;
+      color: #777;
+    }
+
+    .done .main-text {
+      text-decoration: line-through;
+      color: #888;
+    }
+
     .empty {
       text-align: center;
-      color: #666;
+      color: #777;
     }
   </style>
 </head>
@@ -73,51 +87,29 @@
   <h1>SmartTodo</h1>
 
   <div class="input-row">
-    <input type="text" id="taskInput" placeholder="Enter a task..." />
+    <input id="taskInput" placeholder="Enter a task..." />
     <button onclick="addTask()">Add</button>
+  </div>
+
+  <div class="filters">
+    <button onclick="setFilter('all')">All</button>
+    <button onclick="setFilter('active')">Active</button>
+    <button onclick="setFilter('done')">Done</button>
   </div>
 
   <div id="taskContainer"></div>
 
   <script>
     let tasks = loadTasks();
+    let currentFilter = "all";
 
     function saveTasks() {
       localStorage.setItem("tasks", JSON.stringify(tasks));
     }
 
     function loadTasks() {
-      const stored = localStorage.getItem("tasks");
-      return stored ? JSON.parse(stored) : [];
-    }
-
-    function renderTasks() {
-      const container = document.getElementById("taskContainer");
-
-      if (tasks.length === 0) {
-        container.innerHTML = '<p class="empty">No tasks yet.</p>';
-        return;
-      }
-
-      let html = "<ul>";
-
-      tasks.forEach((task, index) => {
-        const date = new Date(task.createdAt).toLocaleString();
-
-        html += `
-          <li>
-            <div class="text">
-              <span>${task.text}</span>
-              <span class="meta">${date}</span>
-            </div>
-            <button onclick="deleteTask(${index})">Delete</button>
-          </li>
-        `;
-      });
-
-      html += "</ul>";
-
-      container.innerHTML = html;
+      const data = localStorage.getItem("tasks");
+      return data ? JSON.parse(data) : [];
     }
 
     function addTask() {
@@ -127,23 +119,74 @@
       if (!text) return;
 
       tasks.push({
-        text: text,
-        createdAt: Date.now()
+        text,
+        createdAt: Date.now(),
+        done: false
       });
 
       input.value = "";
-
       saveTasks();
-      renderTasks();
+      render();
+    }
+
+    function toggleTask(index) {
+      tasks[index].done = !tasks[index].done;
+      saveTasks();
+      render();
     }
 
     function deleteTask(index) {
       tasks.splice(index, 1);
       saveTasks();
-      renderTasks();
+      render();
     }
 
-    renderTasks();
+    function setFilter(filter) {
+      currentFilter = filter;
+      render();
+    }
+
+    function getFilteredTasks() {
+      if (currentFilter === "active") {
+        return tasks.filter(t => !t.done);
+      }
+      if (currentFilter === "done") {
+        return tasks.filter(t => t.done);
+      }
+      return tasks;
+    }
+
+    function render() {
+      const container = document.getElementById("taskContainer");
+      const list = getFilteredTasks();
+
+      if (list.length === 0) {
+        container.innerHTML = `<p class="empty">No tasks found.</p>`;
+        return;
+      }
+
+      container.innerHTML = "<ul>" + list.map((task, i) => {
+        const date = new Date(task.createdAt).toLocaleString();
+
+        return `
+          <li class="${task.done ? "done" : ""}">
+            <div class="text">
+              <span class="main-text">${task.text}</span>
+              <span class="meta">${date}</span>
+            </div>
+
+            <div>
+              <button onclick="toggleTask(${i})">
+                ${task.done ? "Undo" : "Done"}
+              </button>
+              <button onclick="deleteTask(${i})">Delete</button>
+            </div>
+          </li>
+        `;
+      }).join("") + "</ul>";
+    }
+
+    render();
   </script>
 
 </body>
