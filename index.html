@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartTodo - MVP 3</title>
+  <title>SmartTodo - MVP 4</title>
 
   <style>
     body {
@@ -50,48 +50,67 @@
       margin-bottom: 10px;
     }
 
+    .meta {
+      font-size: 12px;
+      color: #666;
+      display: block;
+    }
+
+    .text {
+      display: flex;
+      flex-direction: column;
+    }
+
     .empty {
       text-align: center;
       color: #666;
     }
   </style>
 </head>
+
 <body>
 
   <h1>SmartTodo</h1>
 
   <div class="input-row">
-    <input
-      type="text"
-      id="taskInput"
-      placeholder="Enter a task..."
-    >
+    <input type="text" id="taskInput" placeholder="Enter a task..." />
     <button onclick="addTask()">Add</button>
   </div>
 
   <div id="taskContainer"></div>
 
   <script>
-    let tasks = [];
+    let tasks = loadTasks();
+
+    function saveTasks() {
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
+    function loadTasks() {
+      const stored = localStorage.getItem("tasks");
+      return stored ? JSON.parse(stored) : [];
+    }
 
     function renderTasks() {
       const container = document.getElementById("taskContainer");
 
       if (tasks.length === 0) {
-        container.innerHTML =
-          '<p class="empty">No tasks yet.</p>';
+        container.innerHTML = '<p class="empty">No tasks yet.</p>';
         return;
       }
 
       let html = "<ul>";
 
       tasks.forEach((task, index) => {
+        const date = new Date(task.createdAt).toLocaleString();
+
         html += `
           <li>
-            <span>${task}</span>
-            <button onclick="deleteTask(${index})">
-              Delete
-            </button>
+            <div class="text">
+              <span>${task.text}</span>
+              <span class="meta">${date}</span>
+            </div>
+            <button onclick="deleteTask(${index})">Delete</button>
           </li>
         `;
       });
@@ -102,25 +121,25 @@
     }
 
     function addTask() {
-      const input =
-        document.getElementById("taskInput");
+      const input = document.getElementById("taskInput");
+      const text = input.value.trim();
 
-      const task = input.value.trim();
+      if (!text) return;
 
-      if (task === "") {
-        return;
-      }
-
-      tasks.push(task);
+      tasks.push({
+        text: text,
+        createdAt: Date.now()
+      });
 
       input.value = "";
 
+      saveTasks();
       renderTasks();
     }
 
     function deleteTask(index) {
       tasks.splice(index, 1);
-
+      saveTasks();
       renderTasks();
     }
 
