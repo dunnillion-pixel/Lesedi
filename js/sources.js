@@ -1,6 +1,7 @@
 const SourceService = {
 
   create(type, title, rawText) {
+
     return {
       id: crypto.randomUUID(),
       type,
@@ -8,14 +9,20 @@ const SourceService = {
       rawText,
       createdAt: Date.now()
     };
+
   },
 
-  createTeamsSimulated(title, transcript) {
+  createTeamsSimulated(
+    title,
+    transcript
+  ) {
+
     return this.create(
       "teams-simulated",
       title,
       transcript
     );
+
   }
 
 };
