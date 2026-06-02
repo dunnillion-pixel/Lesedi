@@ -1,5 +1,6 @@
 let tasks = Storage.load();
 let suggestions = Storage.loadSuggestions();
+let sources = [];
 
 let currentFilter = "all";
 
@@ -37,7 +38,7 @@ document
 
 document
   .getElementById("analyzeTranscriptButton")
-  .addEventListener("click", analyzeTranscript);
+  .addEventListener("click", analyzeTeamsTranscript);
 
 document
   .querySelectorAll("[data-filter]")
@@ -79,23 +80,6 @@ function addTask() {
   render();
 }
 
-/* ---------------- TASK ACTIONS ---------------- */
-
-function toggleTask(id) {
-  const task = tasks.find(t => t.id === id);
-  if (!task) return;
-
-  task.done = !task.done;
-  Storage.save(tasks);
-  render();
-}
-
-function deleteTask(id) {
-  tasks = tasks.filter(t => t.id !== id);
-  Storage.save(tasks);
-  render();
-}
-
 /* ---------------- AI ---------------- */
 
 function runAI() {
@@ -118,20 +102,25 @@ function runAI() {
     `Recommended: ${best.text}`;
 }
 
-/* ---------------- TRANSCRIPT → SUGGESTIONS ---------------- */
+/* ---------------- 🧠 TEAMS TRANSCRIPT INGESTION ---------------- */
 
-function analyzeTranscript() {
+async function analyzeTeamsTranscript() {
 
   const text =
     document.getElementById("transcriptInput").value;
 
-  const newSuggestions =
-    AIEngine.analyzeTranscript(text);
+  if (!text.trim()) return;
 
-  if (newSuggestions.length === 0) {
-    alert("No actionable items found.");
-    return;
-  }
+  // Extract a fake meeting title (simple heuristic)
+  const title = "Teams Meeting - " + new Date().toLocaleString();
+
+  const source =
+    SourceService.createTeamsSimulated(title, text);
+
+  sources.push(source);
+
+  const newSuggestions =
+    await AIEngine.analyzeTranscript(text, source);
 
   suggestions = [
     ...suggestions,
@@ -143,19 +132,6 @@ function analyzeTranscript() {
   renderSuggestions();
 
   document.getElementById("transcriptInput").value = "";
-}
-
-/* ---------------- FILTER ---------------- */
-
-function getFilteredTasks() {
-
-  if (currentFilter === "active")
-    return tasks.filter(t => !t.done);
-
-  if (currentFilter === "done")
-    return tasks.filter(t => t.done);
-
-  return tasks;
 }
 
 /* ---------------- SUGGESTIONS ---------------- */
@@ -206,7 +182,20 @@ function rejectSuggestion(id) {
   renderSuggestions();
 }
 
-/* ---------------- RENDER ---------------- */
+/* ---------------- FILTER ---------------- */
+
+function getFilteredTasks() {
+
+  if (currentFilter === "active")
+    return tasks.filter(t => !t.done);
+
+  if (currentFilter === "done")
+    return tasks.filter(t => t.done);
+
+  return tasks;
+}
+
+/* ---------------- RENDER TASKS ---------------- */
 
 function render() {
 
@@ -260,7 +249,7 @@ function render() {
     "</ul>";
 }
 
-/* ---------------- RENDER SUGGESTIONS ---------------- */
+/* ---------------- SUGGESTIONS ---------------- */
 
 function renderSuggestions() {
 
