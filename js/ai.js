@@ -1,44 +1,29 @@
 const AIEngine = {
 
-  async analyzeTranscript(text, sourceMeta = null) {
+  async analyzeTranscript(text, source) {
 
     if (!text || !text.trim()) return [];
 
-    const prompt = this.buildPrompt(text, sourceMeta);
+    const prompt = this.buildPrompt(text, source);
 
     const raw = await this.callLLM(prompt);
 
-    return this.parseResponse(raw, sourceMeta);
+    return this.parseResponse(raw, source);
 
   },
 
-  buildPrompt(text, sourceMeta) {
-
-    const context = sourceMeta
-      ? `Meeting: ${sourceMeta.title}\nType: ${sourceMeta.type}\n`
-      : "";
+  buildPrompt(text, source) {
 
     return `
-You are a meeting intelligence system.
+You extract tasks from meetings.
 
-Extract actionable tasks from the transcript.
-
-Rules:
-- Only extract real actions
-- Ignore conversation filler
-- Convert vague statements into clear tasks
-- Assign confidence (0 to 1)
-- Output STRICT JSON only
-
-${context}
-
-Format:
+Return JSON only:
 [
-  {
-    "text": "action",
-    "confidence": 0.0
-  }
+  { "text": "...", "confidence": 0.0 }
 ]
+
+Meeting: ${source.title}
+Type: ${source.type}
 
 Transcript:
 """
@@ -50,7 +35,6 @@ ${text}
 
   async callLLM(prompt) {
 
-    // MOCK LLM (still safe for MVP-B2)
     console.log("LLM PROMPT:", prompt);
 
     return new Promise(resolve => {
@@ -65,7 +49,7 @@ ${text}
           },
           {
             text: "Review vendor proposal",
-            confidence: 0.89
+            confidence: 0.88
           },
           {
             text: "Send budget forecast",
@@ -74,13 +58,13 @@ ${text}
 
         ]));
 
-      }, 700);
+      }, 600);
 
     });
 
   },
 
-  parseResponse(raw, sourceMeta) {
+  parseResponse(raw, source) {
 
     try {
 
@@ -90,13 +74,13 @@ ${text}
         SuggestionService.create(
           item.text,
           item.confidence,
-          sourceMeta ? sourceMeta.type : "unknown"
+          source.id
         )
       );
 
     } catch (e) {
 
-      console.error("LLM parse error:", e);
+      console.error(e);
 
       return [];
 
