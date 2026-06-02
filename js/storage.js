@@ -24,6 +24,19 @@ const Storage = {
     return JSON.parse(
       localStorage.getItem("suggestions")
     ) || [];
+  },
+
+  saveSources(sources) {
+    localStorage.setItem(
+      "sources",
+      JSON.stringify(sources)
+    );
+  },
+
+  loadSources() {
+    return JSON.parse(
+      localStorage.getItem("sources")
+    ) || [];
   }
 
 };
