@@ -26,13 +26,34 @@
 
   <input id="dueInput" type="datetime-local" />
 
-  <button id="addTaskButton">Add Task</button>
+  <button id="addTaskButton">
+    Add Task
+  </button>
 
 </div>
 
 <div class="panel">
-  <button id="aiButton">🧠 What should I do next?</button>
-  <div id="aiOutput">AI idle...</div>
+  <button id="aiButton">
+    🧠 What should I do next?
+  </button>
+
+  <div id="aiOutput">
+    AI idle...
+  </div>
+</div>
+
+<div class="panel">
+
+  <h3>AI Suggestions</h3>
+
+  <button id="loadSuggestionsButton">
+    Load Demo Suggestions
+  </button>
+
+  <div id="suggestionContainer">
+    No suggestions available.
+  </div>
+
 </div>
 
 <div class="filters">
@@ -46,6 +67,7 @@
 <script src="js/storage.js"></script>
 <script src="js/tasks.js"></script>
 <script src="js/status.js"></script>
+<script src="js/suggestions.js"></script>
 <script src="js/app.js"></script>
 
 </body>
