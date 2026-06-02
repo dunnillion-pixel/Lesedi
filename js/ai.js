@@ -1,36 +1,42 @@
 const AIEngine = {
 
-  async analyzeTranscript(text) {
+  async analyzeTranscript(text, sourceMeta = null) {
 
     if (!text || !text.trim()) return [];
 
-    const prompt = this.buildPrompt(text);
+    const prompt = this.buildPrompt(text, sourceMeta);
 
     const raw = await this.callLLM(prompt);
 
-    return this.parseResponse(raw);
+    return this.parseResponse(raw, sourceMeta);
 
   },
 
-  buildPrompt(text) {
+  buildPrompt(text, sourceMeta) {
+
+    const context = sourceMeta
+      ? `Meeting: ${sourceMeta.title}\nType: ${sourceMeta.type}\n`
+      : "";
 
     return `
-You are a task extraction system.
+You are a meeting intelligence system.
 
-Convert the transcript into actionable tasks.
+Extract actionable tasks from the transcript.
 
 Rules:
-- Extract only clear actions
-- Each action must be short and imperative
-- Ignore chit-chat
-- Assign confidence between 0 and 1
+- Only extract real actions
+- Ignore conversation filler
+- Convert vague statements into clear tasks
+- Assign confidence (0 to 1)
 - Output STRICT JSON only
+
+${context}
 
 Format:
 [
   {
-    "text": "action here",
-    "confidence": 0.0-1.0
+    "text": "action",
+    "confidence": 0.0
   }
 ]
 
@@ -44,9 +50,7 @@ ${text}
 
   async callLLM(prompt) {
 
-    // 🔴 MOCK LLM (safe fallback for now)
-    // This simulates what OpenAI/Azure will return later
-
+    // MOCK LLM (still safe for MVP-B2)
     console.log("LLM PROMPT:", prompt);
 
     return new Promise(resolve => {
@@ -57,26 +61,26 @@ ${text}
 
           {
             text: "Prepare executive summary",
-            confidence: 0.92
+            confidence: 0.93
           },
           {
             text: "Review vendor proposal",
-            confidence: 0.88
+            confidence: 0.89
           },
           {
             text: "Send budget forecast",
-            confidence: 0.81
+            confidence: 0.84
           }
 
         ]));
 
-      }, 600);
+      }, 700);
 
     });
 
   },
 
-  parseResponse(raw) {
+  parseResponse(raw, sourceMeta) {
 
     try {
 
@@ -86,7 +90,7 @@ ${text}
         SuggestionService.create(
           item.text,
           item.confidence,
-          "llm-transcript"
+          sourceMeta ? sourceMeta.type : "unknown"
         )
       );
 
