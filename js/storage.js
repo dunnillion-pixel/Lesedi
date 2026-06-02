@@ -1,13 +1,13 @@
 const Storage = {
 
-  save(tasks) {
+  saveTasks(tasks) {
     localStorage.setItem(
       "tasks",
       JSON.stringify(tasks)
     );
   },
 
-  load() {
+  loadTasks() {
     return JSON.parse(
       localStorage.getItem("tasks")
     ) || [];
@@ -36,6 +36,19 @@ const Storage = {
   loadSources() {
     return JSON.parse(
       localStorage.getItem("sources")
+    ) || [];
+  },
+
+  saveActivities(activities) {
+    localStorage.setItem(
+      "activities",
+      JSON.stringify(activities)
+    );
+  },
+
+  loadActivities() {
+    return JSON.parse(
+      localStorage.getItem("activities")
     ) || [];
   }
 
