@@ -1,5 +1,5 @@
 let tasks = Storage.load();
-let suggestions = [];
+let suggestions = Storage.loadSuggestions();
 
 let currentFilter = "all";
 
@@ -138,6 +138,10 @@ function loadDemoSuggestions() {
     SuggestionService
       .loadDemoSuggestions();
 
+  Storage.saveSuggestions(
+    suggestions
+  );
+
   renderSuggestions();
 }
 
@@ -166,6 +170,10 @@ function acceptSuggestion(id) {
 
   Storage.save(tasks);
 
+  Storage.saveSuggestions(
+    suggestions
+  );
+
   render();
   renderSuggestions();
 }
@@ -176,6 +184,10 @@ function rejectSuggestion(id) {
     suggestions.filter(
       s => s.id !== id
     );
+
+  Storage.saveSuggestions(
+    suggestions
+  );
 
   renderSuggestions();
 }
