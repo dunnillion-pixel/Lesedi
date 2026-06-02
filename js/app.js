@@ -36,6 +36,10 @@ document
   .addEventListener("click", loadDemoSuggestions);
 
 document
+  .getElementById("analyzeTranscriptButton")
+  .addEventListener("click", analyzeTranscript);
+
+document
   .querySelectorAll("[data-filter]")
   .forEach(btn => {
     btn.addEventListener("click", () => {
@@ -83,22 +87,86 @@ function toggleTask(id) {
 
   task.done = !task.done;
   Storage.save(tasks);
-
   render();
 }
 
 function deleteTask(id) {
   tasks = tasks.filter(t => t.id !== id);
   Storage.save(tasks);
-
   render();
+}
+
+/* ---------------- AI ---------------- */
+
+function runAI() {
+
+  const active = tasks.filter(t => !t.done);
+
+  if (active.length === 0) {
+    aiOutput.innerText = "No tasks 🎉";
+    return;
+  }
+
+  const best =
+    [...active].sort(
+      (a, b) =>
+        StatusService.score(b) -
+        StatusService.score(a)
+    )[0];
+
+  aiOutput.innerText =
+    `Recommended: ${best.text}`;
+}
+
+/* ---------------- TRANSCRIPT → SUGGESTIONS ---------------- */
+
+function analyzeTranscript() {
+
+  const text =
+    document.getElementById("transcriptInput").value;
+
+  const newSuggestions =
+    AIEngine.analyzeTranscript(text);
+
+  if (newSuggestions.length === 0) {
+    alert("No actionable items found.");
+    return;
+  }
+
+  suggestions = [
+    ...suggestions,
+    ...newSuggestions
+  ];
+
+  Storage.saveSuggestions(suggestions);
+
+  renderSuggestions();
+
+  document.getElementById("transcriptInput").value = "";
+}
+
+/* ---------------- FILTER ---------------- */
+
+function getFilteredTasks() {
+
+  if (currentFilter === "active")
+    return tasks.filter(t => !t.done);
+
+  if (currentFilter === "done")
+    return tasks.filter(t => t.done);
+
+  return tasks;
 }
 
 /* ---------------- SUGGESTIONS ---------------- */
 
 function loadDemoSuggestions() {
-  suggestions = SuggestionService.loadDemoSuggestions();
+
+  suggestions =
+    SuggestionService.loadDemoSuggestions();
+
   Storage.saveSuggestions(suggestions);
+
   renderSuggestions();
 }
 
@@ -138,42 +206,7 @@ function rejectSuggestion(id) {
   renderSuggestions();
 }
 
-/* ---------------- FILTER ---------------- */
-
-function getFilteredTasks() {
-
-  if (currentFilter === "active")
-    return tasks.filter(t => !t.done);
-
-  if (currentFilter === "done")
-    return tasks.filter(t => t.done);
-
-  return tasks;
-}
-
-/* ---------------- AI ---------------- */
-
-function runAI() {
-
-  const active = tasks.filter(t => !t.done);
-
-  if (active.length === 0) {
-    aiOutput.innerText = "No tasks 🎉";
-    return;
-  }
-
-  const best =
-    [...active].sort(
-      (a, b) =>
-        StatusService.score(b) -
-        StatusService.score(a)
-    )[0];
-
-  aiOutput.innerText =
-    `Recommended: ${best.text}`;
-}
-
-/* ---------------- RENDER TASKS ---------------- */
+/* ---------------- RENDER ---------------- */
 
 function render() {
 
@@ -220,6 +253,7 @@ function render() {
               Delete
             </button>
           </div>
+
         </li>
       `;
     }).join("") +
@@ -264,7 +298,7 @@ function renderSuggestions() {
     `).join("");
 }
 
-/* ---------------- GLOBAL EXPORTS ---------------- */
+/* ---------------- GLOBAL ---------------- */
 
 window.toggleTask = toggleTask;
 window.deleteTask = deleteTask;
