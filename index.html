@@ -3,115 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartTodo - MVP 8A</title>
+  <title>SmartTodo</title>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      max-width: 540px;
-      margin: auto;
-    }
-
-    h1 {
-      text-align: center;
-    }
-
-    .input-row {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-
-    .row {
-      display: flex;
-      gap: 10px;
-    }
-
-    input, select {
-      padding: 10px;
-      font-size: 14px;
-    }
-
-    input {
-      flex: 1;
-    }
-
-    button {
-      padding: 10px;
-      cursor: pointer;
-    }
-
-    .panel {
-      margin: 10px 0;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      background: #f9f9f9;
-    }
-
-    .filters {
-      display: flex;
-      gap: 5px;
-      margin: 10px 0;
-    }
-
-    .filters button {
-      flex: 1;
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-
-    li {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 10px;
-    }
-
-    .text {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .meta {
-      font-size: 12px;
-      color: #777;
-    }
-
-    .status {
-      font-size: 18px;
-      margin-right: 6px;
-    }
-
-    .done .main-text {
-      text-decoration: line-through;
-      color: #888;
-    }
-
-    .empty {
-      text-align: center;
-      color: #777;
-    }
-
-    .due {
-      font-weight: bold;
-    }
-  </style>
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 
 <body>
 
 <h1>SmartTodo 📅</h1>
 
-<!-- INPUT -->
 <div class="input-row">
 
   <div class="row">
@@ -124,214 +24,36 @@
     </select>
   </div>
 
-  <input id="dueInput" type="datetime-local" />
+  <input id="dueInput" type="datetime-local">
 
-  <button onclick="addTask()">Add Task</button>
+  <button id="addTaskButton">
+    Add Task
+  </button>
+
 </div>
 
-<!-- AI PANEL -->
 <div class="panel">
-  <button onclick="runAI()">🧠 What should I do next?</button>
-  <div id="aiOutput">AI idle...</div>
+  <button id="aiButton">
+    🧠 What should I do next?
+  </button>
+
+  <div id="aiOutput">
+    AI idle...
+  </div>
 </div>
 
-<!-- FILTERS -->
 <div class="filters">
-  <button onclick="setFilter('all')">All</button>
-  <button onclick="setFilter('active')">Active</button>
-  <button onclick="setFilter('done')">Done</button>
+  <button data-filter="all">All</button>
+  <button data-filter="active">Active</button>
+  <button data-filter="done">Done</button>
 </div>
 
 <div id="taskContainer"></div>
 
-<script>
-let tasks = loadTasks();
-let currentFilter = "all";
-
-/* ---------------- STORAGE ---------------- */
-
-function saveTasks() {
-  localStorage.setItem("tasks", JSON.stringify(tasks));
-}
-
-function loadTasks() {
-  return JSON.parse(localStorage.getItem("tasks")) || [];
-}
-
-/* ---------------- TASK OPS ---------------- */
-
-function addTask() {
-  const text = document.getElementById("taskInput").value.trim();
-  const priority = Number(document.getElementById("priorityInput").value);
-  const dueRaw = document.getElementById("dueInput").value;
-
-  if (!text) return;
-
-  tasks.push({
-    text,
-    createdAt: Date.now(),
-    dueAt: dueRaw ? new Date(dueRaw).getTime() : null,
-    done: false,
-    priority
-  });
-
-  document.getElementById("taskInput").value = "";
-  document.getElementById("dueInput").value = "";
-
-  saveTasks();
-  render();
-}
-
-function toggleTask(i) {
-  tasks[i].done = !tasks[i].done;
-  saveTasks();
-  render();
-}
-
-function deleteTask(i) {
-  tasks.splice(i, 1);
-  saveTasks();
-  render();
-}
-
-/* ---------------- FILTER ---------------- */
-
-function setFilter(f) {
-  currentFilter = f;
-  render();
-}
-
-function filteredTasks() {
-  if (currentFilter === "active") return tasks.filter(t => !t.done);
-  if (currentFilter === "done") return tasks.filter(t => t.done);
-  return tasks;
-}
-
-/* ---------------- ROBOT STATUS ---------------- */
-
-function getStatus(task) {
-  if (task.done) return "🟢";
-
-  const now = Date.now();
-  const ageHours = (now - task.createdAt) / (1000 * 60 * 60);
-
-  // overdue check
-  if (task.dueAt && now > task.dueAt) return "🔴";
-
-  if (ageHours > 24) return "🔴";
-
-  return "🟠";
-}
-
-/* ---------------- AI ENGINE (UPDATED) ---------------- */
-
-function runAI() {
-  const active = tasks.filter(t => !t.done);
-
-  if (active.length === 0) {
-    setAI("No tasks 🎉");
-    return;
-  }
-
-  const scored = active.map(t => {
-    const now = Date.now();
-    const ageHours = (now - t.createdAt) / (1000 * 60 * 60);
-
-    let score = t.priority * 10;
-
-    // age pressure
-    if (ageHours > 72) score += 20;
-    else if (ageHours > 24) score += 10;
-
-    // due pressure
-    if (t.dueAt) {
-      const diff = t.dueAt - now;
-
-      if (diff < 0) score += 30;           // overdue
-      else if (diff < 86400000) score += 20; // < 24h
-      else if (diff < 259200000) score += 10; // < 3 days
-    }
-
-    return { ...t, score };
-  });
-
-  scored.sort((a, b) => b.score - a.score);
-
-  const best = scored[0];
-
-  setAI(
-`Recommended Task:
-${best.text}
-
-Priority: ${best.priority}
-Score: ${best.score.toFixed(1)}
-${best.dueAt ? "Due: " + new Date(best.dueAt).toLocaleString() : "No due date"}`
-  );
-}
-
-function setAI(text) {
-  document.getElementById("aiOutput").innerText = text;
-}
-
-/* ---------------- ROBOT STATUS ---------------- */
-
-function getStatus(task) {
-  if (task.done) return "🟢";
-
-  const now = Date.now();
-  const ageHours = (now - task.createdAt) / (1000 * 60 * 60);
-
-  if (task.dueAt && now > task.dueAt) return "🔴";
-  if (ageHours > 24) return "🔴";
-
-  return "🟠";
-}
-
-/* ---------------- RENDER ---------------- */
-
-function render() {
-  const container = document.getElementById("taskContainer");
-  const list = filteredTasks();
-
-  if (list.length === 0) {
-    container.innerHTML = '<p class="empty">No tasks found.</p>';
-    return;
-  }
-
-  container.innerHTML = "<ul>" + list.map((t, i) => {
-
-    const status = getStatus(t);
-
-    const dueText = t.dueAt
-      ? new Date(t.dueAt).toLocaleString()
-      : "No due date";
-
-    return `
-      <li>
-        <div class="text">
-          <span>
-            <span class="status">${status}</span>
-            <span class="main-text">${t.text}</span>
-          </span>
-
-          <span class="meta">
-            Priority ${t.priority} • Due: ${dueText}
-          </span>
-        </div>
-
-        <div>
-          <button onclick="toggleTask(${i})">
-            ${t.done ? "Undo" : "Done"}
-          </button>
-          <button onclick="deleteTask(${i})">Delete</button>
-        </div>
-      </li>
-    `;
-  }).join("") + "</ul>";
-}
-
-render();
-</script>
+<script src="js/storage.js"></script>
+<script src="js/tasks.js"></script>
+<script src="js/status.js"></script>
+<script src="js/app.js"></script>
 
 </body>
 </html>
