@@ -11,6 +11,19 @@ const Storage = {
     return JSON.parse(
       localStorage.getItem("tasks")
     ) || [];
+  },
+
+  saveSuggestions(suggestions) {
+    localStorage.setItem(
+      "suggestions",
+      JSON.stringify(suggestions)
+    );
+  },
+
+  loadSuggestions() {
+    return JSON.parse(
+      localStorage.getItem("suggestions")
+    ) || [];
   }
 
 };
